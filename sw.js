@@ -30,8 +30,20 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// network-first: عند وجود نت تُحمّل أحدث الملفات (لا تحتاج Ctrl+Shift+R). عند انقطاع النت يُستخدم الكاش — التطبيق يعمل بدون إنترنت والبيانات في localStorage.
 self.addEventListener('fetch', e => {
+  const url = e.request.url;
+  if (url.startsWith('http') && !url.startsWith(self.location.origin)) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request)
+      .then(res => {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        return res;
+      })
+      .catch(() => caches.match(e.request).then(r => r || new Response('Offline', { status: 503, statusText: 'Offline' })))
   );
 });

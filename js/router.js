@@ -57,3 +57,5 @@ export const Router = {
         this.navigate(hash);
     }
 };
+
+window.addEventListener('hashchange', () => Router.boot());

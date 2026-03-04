@@ -1,3 +1,30 @@
+// ── XSS-safe escaping ──
+export function escapeHtml(str) {
+    if (str == null) return '';
+    const s = String(str);
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+export function escapeAttr(str) {
+    if (str == null) return '';
+    return escapeHtml(String(str));
+}
+
+/** For embedding inside a JS single-quoted string (e.g. onclick="...'${x}'..." ) */
+export function escapeJsString(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n');
+}
+
 // ── Number Formatting (English digits, thousand sep, no trailing .00) ──
 export function fmtNum(n) {
     const v = Number(n) || 0;
@@ -18,10 +45,10 @@ export function fmtCurrency(amount, currency = 'EGP') {
 }
 
 // Balance status label helper
+// له = الطرف الآخر عايز مني (أنا مدين). عليه = أنا عايز منه (هو مدين).
 export function balanceLabel(bal, isClient = true) {
     if (bal === 0) return '';
-    if (isClient) return bal > 0 ? 'دائن (له)' : 'مدين (عليه)';
-    return bal > 0 ? 'مدين (عليه)' : 'دائن (له)';
+    return bal > 0 ? 'دائن (له)' : 'مدين (عليه)';
 }
 
 export function fmtDate(d) {
@@ -39,7 +66,7 @@ export function toast(msg, type = 'info') {
     const c = document.getElementById('toast-container');
     const el = document.createElement('div');
     el.className = `${toastColors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-[300px] transform -translate-x-full transition-transform duration-300`;
-    el.innerHTML = `<i data-lucide="${toastIcons[type]}" class="w-5 h-5 shrink-0"></i><span class="text-sm font-medium">${msg}</span>`;
+    el.innerHTML = `<i data-lucide="${toastIcons[type]}" class="w-5 h-5 shrink-0"></i><span class="text-sm font-medium">${escapeHtml(msg)}</span>`;
     c.appendChild(el);
     if (window.lucide) lucide.createIcons({ nodes: [el] });
     requestAnimationFrame(() => { el.style.transform = 'translateX(0)'; });
@@ -70,8 +97,10 @@ export function closeModal() {
 
 // ── Print ──
 export function printInvoice(bodyHtml, title = '') {
+    const safeTitle = escapeHtml(title);
+    const safeBody = String(bodyHtml).replace(/<\/script/gi, '<\\/script');
     const w = window.open('', '_blank', 'width=800,height=900');
-    w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${title}</title>
+    w.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${safeTitle}</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -89,7 +118,7 @@ td{padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:12px}
 .total-row{font-weight:700;font-size:15px;border-top:2px solid #1e293b}
 .logo{max-width:70px;max-height:70px}
 @media print{body{padding:0}}
-</style></head><body>${bodyHtml}</body>
+</style></head><body>${safeBody}</body>
 <script>setTimeout(()=>window.print(),500)<\/script></html>`);
     w.document.close();
 }

@@ -69,6 +69,11 @@ installBtn.addEventListener('click', async () => {
   }
 });
 
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  installBtn.classList.add('hidden');
+});
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => { });
 }

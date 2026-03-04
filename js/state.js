@@ -32,6 +32,7 @@ export function saveState() {
 export function getState() { if (!state) loadState(); return state; }
 
 export function updateConfig(patch) {
+    if (!state) loadState();
     Object.assign(state.config, patch);
     saveState();
 }

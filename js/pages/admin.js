@@ -1,5 +1,5 @@
 import { getState, addEntity, updateEntity, deleteEntity, addSubsidiary, updateSubsidiary, deleteSubsidiary, exportState, importState, setLogo } from '../state.js';
-import { fmtCurrency, toast, showModal, closeModal, downloadJSON, readFileText, readFileBase64 } from '../utils.js';
+import { fmtCurrency, toast, showModal, closeModal, downloadJSON, readFileText, readFileBase64, escapeHtml, escapeJsString } from '../utils.js';
 import { card, primaryBtn, secondaryBtn, dangerBtn, input, select, emptyState } from '../components.js';
 import { Router } from '../router.js';
 
@@ -45,25 +45,28 @@ export function render() {
 
 function entityRow(ent, st) {
   const subs = st.subsidiaries.filter(s => s.entityId === ent.id);
+  const entNameEsc = escapeJsString(ent.name);
   return `<div class="border border-slate-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
     <div class="flex items-center justify-between">
       <div>
-        <p class="font-bold text-slate-800">${ent.name}</p>
-        <p class="text-xs text-slate-500">${ent.type === 'client' ? 'عميل' : 'شركة النقل'} ${ent.phone ? '• ' + ent.phone : ''} • رصيد افتتاحي: ${fmtCurrency(ent.openingBalance)}</p>
+        <p class="font-bold text-slate-800">${escapeHtml(ent.name)}</p>
+        <p class="text-xs text-slate-500">${ent.type === 'client' ? 'عميل' : 'شركة النقل'} ${ent.phone ? '• ' + escapeHtml(ent.phone) : ''} • رصيد افتتاحي: ${fmtCurrency(ent.openingBalance)}</p>
       </div>
       <div class="flex items-center gap-2">
         <button onclick="window._adminEditEntity('${ent.id}')" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-        <button onclick="window._adminDeleteEntity('${ent.id}','${ent.name}')" class="p-2 rounded-lg hover:bg-red-50 text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        <button onclick="window._adminDeleteEntity('${ent.id}','${entNameEsc}')" class="p-2 rounded-lg hover:bg-red-50 text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
       </div>
     </div>
-    ${subs.length ? `<div class="mt-3 mr-4 border-r-2 border-slate-200 pr-4 space-y-2">${subs.map(s => `
-      <div class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-        <span class="text-sm text-slate-700">${s.name}</span>
+    ${subs.length ? `<div class="mt-3 mr-4 border-r-2 border-slate-200 pr-4 space-y-2">${subs.map(s => {
+      const subNameEsc = escapeJsString(s.name);
+      return `<div class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+        <span class="text-sm text-slate-700">${escapeHtml(s.name)}</span>
         <div class="flex items-center gap-1">
           <button onclick="window._adminEditSub('${s.id}')" class="p-1 rounded hover:bg-slate-200 text-slate-500"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-          <button onclick="window._adminDeleteSub('${s.id}','${s.name}')" class="p-1 rounded hover:bg-red-50 text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          <button onclick="window._adminDeleteSub('${s.id}','${subNameEsc}')" class="p-1 rounded hover:bg-red-50 text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
         </div>
-      </div>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('')}</div>` : ''}
     <button onclick="window._adminAddSub('${ent.id}')" class="mt-2 text-xs text-violet-600 hover:underline flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> إضافة فرع</button>
   </div>`;
 }

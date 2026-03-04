@@ -1,5 +1,5 @@
 import { getState, addTransaction, deleteTransaction, getNextInvoiceIdForEntity } from '../state.js';
-import { fmtCurrency, fmtNum, fmtDate, todayISO, toast, showModal, closeModal, printInvoice } from '../utils.js';
+import { fmtCurrency, fmtNum, fmtDate, todayISO, toast, showModal, closeModal, printInvoice, escapeHtml, escapeAttr } from '../utils.js';
 import { getCurrentRate } from '../api.js';
 import { card, primaryBtn, secondaryBtn, emptyState, badge, input, select } from '../components.js';
 import { Router } from '../router.js';
@@ -18,7 +18,7 @@ export function render() {
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-4">
       <div class="relative">
         <i data-lucide="search" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
-        <input type="text" id="ci-search" placeholder="بحث برقم الفاتورة، الشهادة، المبلغ، أو التاريخ..." oninput="window._ciFilter()"
+        <input type="text" id="ci-search" placeholder="بحث برقم الفاتورة، الشهادة، المبلغ، الحاويات أو التاريخ..." oninput="window._ciFilter()"
           class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-violet-500/20" />
       </div>
     </div>
@@ -35,14 +35,16 @@ function renderList(invs, st) {
         <th class="text-right pb-3 font-semibold">رقم الفاتورة</th>
         <th class="text-right pb-3 font-semibold">العميل</th>
         <th class="text-right pb-3 font-semibold">المبلغ</th>
+        <th class="text-right pb-3 font-semibold">الحاويات</th>
         <th class="text-right pb-3 font-semibold">التاريخ</th>
         <th class="text-right pb-3 font-semibold bg-slate-50/50">إجراءات</th>
       </tr></thead><tbody>${invs.map(t => {
     const ent = st.entities.find(e => e.id === t.entityId);
     return `<tr class="border-b border-slate-50 hover:bg-slate-50/50">
           <td class="py-2.5 font-mono text-xs">${t.invoiceNumber}</td>
-          <td class="py-2.5">${ent?.name || '-'}</td>
+          <td class="py-2.5">${escapeHtml(ent?.name || '-')}</td>
           <td class="py-2.5 font-semibold">${fmtCurrency(t.total)}</td>
+          <td class="py-2.5 text-xs font-mono">${t.containerCount || '-'}</td>
           <td class="py-2.5 text-slate-500">${fmtDate(t.date)}</td>
           <td class="py-2.5"><div class="flex items-center gap-1">
             <button onclick="window._ciPrint('${t.id}')" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500" title="طباعة"><i data-lucide="printer" class="w-4 h-4"></i></button>
@@ -68,6 +70,11 @@ function invoiceForm(st) {
         </div>
         ${input('التاريخ', 'date', 'date', todayISO())}
         ${input('رقم الشهادة (اختياري)', 'certificateNumber')}
+        <div class="space-y-1.5">
+          <label class="block text-sm font-semibold text-slate-700">عدد الحاويات</label>
+          <input type="text" name="containerCount" id="ci-container" placeholder="مثال: 1x40 2*20"
+            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 font-mono" />
+        </div>
         <div class="space-y-1.5">
           <label class="block text-sm font-semibold text-slate-700">سعر الصرف (USD→EGP)</label>
           <input type="number" name="exchangeRate" id="ci-rate" value="${rate}" readonly
@@ -108,7 +115,7 @@ function renderItems() {
   wrap.innerHTML = items.map((it, i) => `
     <div class="bg-slate-50 rounded-xl p-3 space-y-2">
       <div class="flex items-center gap-2">
-        <input type="text" value="${it.description}" onchange="window._ciUpdateItem(${i},'description',this.value)" placeholder="الوصف" class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+        <input type="text" value="${escapeAttr(it.description)}" onchange="window._ciUpdateItem(${i},'description',this.value)" placeholder="الوصف" class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
         <input type="number" value="${it.price}" onchange="window._ciUpdateItem(${i},'price',this.value)" placeholder="السعر" min="0" step="0.01" class="w-28 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm outline-none text-center" />
         <select onchange="window._ciUpdateItem(${i},'currency',this.value)" class="w-24 px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-sm outline-none cursor-pointer">
           <option value="EGP" ${it.currency === 'EGP' ? 'selected' : ''}>جنيه مصري</option>
@@ -117,7 +124,7 @@ function renderItems() {
         <span class="text-sm font-semibold min-w-[100px] text-center">${fmtNum(itemEgp(it))} ج.م</span>
         <button type="button" onclick="window._ciRemoveItem(${i})" class="p-1 rounded hover:bg-red-50 text-red-400"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <textarea onchange="window._ciUpdateItem(${i},'notes',this.value)" placeholder="ملاحظات (اختياري)" rows="1" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none resize-none">${it.notes || ''}</textarea>
+      <textarea onchange="window._ciUpdateItem(${i},'notes',this.value)" placeholder="ملاحظات (اختياري)" rows="1" class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none resize-none">${escapeHtml(it.notes || '')}</textarea>
     </div>`).join('');
   if (window.lucide) lucide.createIcons({ nodes: [wrap] });
 }
@@ -176,7 +183,8 @@ export function init() {
           addTransaction({
             type: 'client', entityId: entityId, subsidiaryId: fd.get('subsidiaryId') || null,
             invoiceNumber: fd.get('invoiceNumber'), certificateNumber: fd.get('certificateNumber') || null,
-            date: fd.get('date'), items: items.map(it => ({ ...it })),
+            date: fd.get('date'), containerCount: (fd.get('containerCount') || '').trim() || null,
+            items: items.map(it => ({ ...it })),
             freight, freightTax: tax, subtotal, total, currency: 'EGP', exchangeRate: rate
           });
           toast('تم حفظ الفاتورة', 'success'); closeModal(); Router.navigate('client-invoices');
@@ -222,7 +230,7 @@ export function init() {
     if (term) {
       invs = invs.filter(t => {
         const searchStr = [
-          t.invoiceNumber, t.certificateNumber, t.total, t.date,
+          t.invoiceNumber, t.certificateNumber, t.total, t.containerCount, t.date,
           ...(t.items || []).map(it => it.notes)
         ].join(' ').toLowerCase();
         return searchStr.includes(term);
@@ -240,15 +248,16 @@ export function init() {
     const sub = t.subsidiaryId ? st.subsidiaries.find(s => s.id === t.subsidiaryId) : null;
     const logo = st.companyLogo ? `<img src="${st.companyLogo}" class="logo" />` : '';
     const html = `
-      <div class="inv-header"><div>${logo}<p class="co-name">${st.config.companyName}</p><p class="inv-title">فاتورة عميل</p></div>
+      <div class="inv-header"><div>${logo}<p class="co-name">${escapeHtml(st.config.companyName)}</p><p class="inv-title">فاتورة عميل</p></div>
         <div class="inv-info"><p class="lbl">رقم الفاتورة</p><p class="val">${t.invoiceNumber}</p>
           ${t.certificateNumber ? `<p class="lbl">رقم الشهادة</p><p class="val">${t.certificateNumber}</p>` : ''}
           <p class="lbl">التاريخ</p><p class="val">${fmtDate(t.date)}</p>
-          <p class="lbl">العميل</p><p class="val">${ent?.name || '-'} ${sub ? `(${sub.name})` : ''}</p></div></div>
+          <p class="lbl">العميل</p><p class="val">${escapeHtml(ent?.name || '-')} ${sub ? `(${escapeHtml(sub.name)})` : ''}</p>
+          ${t.containerCount ? `<p class="lbl">الحاويات</p><p class="val">${t.containerCount}</p>` : ''}</div></div>
       <table><thead><tr><th>#</th><th>الوصف</th><th>السعر</th><th>العملة</th><th>المعادل</th></tr></thead>
         <tbody>${(t.items || []).map((it, i) => {
       const egp = it.currency === 'USD' ? (Number(it.price) * (t.exchangeRate || 1)) : Number(it.price);
-      return `<tr><td>${i + 1}</td><td>${it.description}${it.notes ? `<br/><small style="color:#94a3b8">${it.notes}</small>` : ''}</td><td>${fmtNum(it.price)}</td><td>${it.currency === 'USD' ? 'دولار امريكي' : 'جنيه مصري'}</td><td>${fmtNum(egp)}</td></tr>`;
+      return `<tr><td>${i + 1}</td><td>${escapeHtml(it.description)}${it.notes ? `<br/><small style="color:#94a3b8">${escapeHtml(it.notes)}</small>` : ''}</td><td>${fmtNum(it.price)}</td><td>${it.currency === 'USD' ? 'دولار امريكي' : 'جنيه مصري'}</td><td>${fmtNum(egp)}</td></tr>`;
     }).join('')}</tbody></table>
       <div class="totals"><table class="totals-table">
         <tr><td>إجمالي البنود</td><td>${fmtNum(t.subtotal)}</td></tr>

@@ -1,5 +1,5 @@
 import { getState, addBankTransfer, updateBankTransfer, deleteBankTransfer } from '../state.js';
-import { fmtCurrency, fmtDate, todayISO, toast, showModal, closeModal } from '../utils.js';
+import { fmtCurrency, fmtDate, todayISO, toast, showModal, closeModal, escapeHtml, escapeAttr } from '../utils.js';
 import { card, primaryBtn, secondaryBtn, emptyState, badge, input, select, textarea } from '../components.js';
 import { Router } from '../router.js';
 
@@ -67,7 +67,7 @@ function btForm(st, editData = null) {
           ${input('التاريخ', 'date', 'date', editData?.date || todayISO())}
           ${input('رقم الفاتورة المرتبطة (اختياري)', 'linkedInvoice', 'text', editData?.linkedInvoice || '')}
         </div>
-        ${textarea('ملاحظات', 'notes', 2, editData?.notes || '')}
+        ${textarea('ملاحظات', 'notes', editData?.notes || '', 2)}
         <div class="flex justify-end gap-3">
           ${secondaryBtn('إلغاء', 'window._closeModal()')}
           ${primaryBtn('حفظ', '', 'check', 'type-submit')}

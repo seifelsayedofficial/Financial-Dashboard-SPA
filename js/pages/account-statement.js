@@ -1,5 +1,5 @@
 import { getState } from '../state.js';
-import { fmtCurrency, fmtDate, showModal, closeModal, balanceLabel, printInvoice } from '../utils.js';
+import { fmtCurrency, fmtDate, showModal, closeModal, balanceLabel, printInvoice, escapeHtml } from '../utils.js';
 import { primaryBtn, secondaryBtn, select, emptyState, kpiCard } from '../components.js';
 
 function getAvailableYears(st) {
@@ -49,13 +49,16 @@ export function init() {
 
     const allMovements = [];
 
-    // Invoices
+    // Invoices — البيان = اسم الشركة (الفرع) بدل رقم الفاتورة
     st.transactions.filter(t => t.entityId === entityId).forEach(t => {
+      const sub = t.subsidiaryId ? st.subsidiaries.find(s => s.id === t.subsidiaryId) : null;
+      const entForDesc = st.entities.find(e => e.id === t.entityId);
+      const desc = sub ? sub.name : (entForDesc?.name || `فاتورة ${t.invoiceNumber}`);
       allMovements.push({
         date: t.date || t.createdAt,
         id: t.invoiceNumber,
         cert: t.certificateNumber || '-',
-        desc: `فاتورة ${t.invoiceNumber}`,
+        desc,
         debit: isClient ? t.total : 0,
         credit: isClient ? 0 : t.total,
         type: 'invoice'
@@ -116,7 +119,7 @@ export function init() {
     const modalHtml = `<div class="p-6 space-y-5">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-bold text-slate-800">كشف حساب: ${ent.name} ${yearFilter ? `(${yearFilter})` : ''}</h2>
+          <h2 class="text-lg font-bold text-slate-800">كشف حساب: ${escapeHtml(ent.name)} ${yearFilter ? `(${yearFilter})` : ''}</h2>
           <p class="text-sm text-slate-500">${isClient ? 'عميل' : 'شركة النقل'}</p>
         </div>
         <div class="flex gap-2">
@@ -150,9 +153,9 @@ export function init() {
           </tr>
           ${displayMovements.map(m => `<tr class="border-b border-slate-50 hover:bg-slate-50/50">
             <td class="p-3 text-slate-500">${fmtDate(m.date)}</td>
-            <td class="p-3 font-mono">${m.id}</td>
-            <td class="p-3 text-slate-500">${m.cert}</td>
-            <td class="p-3">${m.desc}</td>
+            <td class="p-3 font-mono">${escapeHtml(m.id)}</td>
+            <td class="p-3 text-slate-500">${escapeHtml(m.cert)}</td>
+            <td class="p-3">${escapeHtml(m.desc)}</td>
             <td class="p-3 ${m.debit ? 'text-red-600 font-semibold' : 'text-slate-300'}">${m.debit ? fmtCurrency(m.debit) : '-'}</td>
             <td class="p-3 ${m.credit ? 'text-emerald-600 font-semibold' : 'text-slate-300'}">${m.credit ? fmtCurrency(m.credit) : '-'}</td>
           </tr>`).join('')}
@@ -180,9 +183,9 @@ export function init() {
     const logo = st.companyLogo ? `<img src="${st.companyLogo}" class="logo" />` : '';
 
     const html = `
-      <div class="inv-header"><div>${logo}<p class="co-name">${st.config.companyName}</p><p class="inv-title">كشف حساب: ${ent.name} ${yearFilter ? `(${yearFilter})` : ''}</p></div>
+      <div class="inv-header"><div>${logo}<p class="co-name">${escapeHtml(st.config.companyName)}</p><p class="inv-title">كشف حساب: ${escapeHtml(ent.name)} ${yearFilter ? `(${yearFilter})` : ''}</p></div>
         <div class="inv-info">
-          <p class="lbl">الجهة</p><p class="val">${ent.name} - ${isClient ? 'عميل' : 'شركة نقل'}</p>
+          <p class="lbl">الجهة</p><p class="val">${escapeHtml(ent.name)}</p>
           <p class="lbl">تاريخ الإصدار</p><p class="val">${fmtDate(new Date().toISOString())}</p>
         </div>
       </div>
@@ -197,7 +200,7 @@ export function init() {
             <td>${openingForPeriod >= 0 ? fmtCurrency(openingForPeriod) : '-'}</td>
           </tr>
           ${displayMovements.map(m => `<tr>
-            <td>${fmtDate(m.date)}</td><td>${m.id}</td><td>${m.cert}</td><td>${m.desc}</td>
+            <td>${fmtDate(m.date)}</td><td>${escapeHtml(m.id)}</td><td>${escapeHtml(m.cert)}</td><td>${escapeHtml(m.desc)}</td>
             <td ${m.debit ? 'style="color:red"' : ''}>${m.debit ? fmtCurrency(m.debit) : '-'}</td>
             <td ${m.credit ? 'style="color:green"' : ''}>${m.credit ? fmtCurrency(m.credit) : '-'}</td>
           </tr>`).join('')}
@@ -209,7 +212,7 @@ export function init() {
         <tr class="total-row"><td>الرصيد النهائي</td><td>${fmtCurrency(Math.abs(finalBalance))} ${balanceLabel(finalBalance, isClient)}</td></tr>
       </table></div>`;
 
-    printInvoice(html, `كشف حساب ${ent.name}`);
+    printInvoice(html, `كشف حساب ${escapeHtml(ent.name)}`);
   };
 
   window._closeModal = closeModal;
