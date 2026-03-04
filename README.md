@@ -1,4 +1,4 @@
-# Alexandria Office Accounting System (مكتب الاسكندرية)
+# Accounting System
 
 A lightweight, fully client-side Single Page Application (SPA) designed specifically for a logistics and import-export office. Built with Vanilla JavaScript and Tailwind CSS, providing a fast, modern, and purely local accounting experience entirely in Arabic (RTL).
 
